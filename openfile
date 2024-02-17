@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+if [ -z "$1" ]; then
+  printf "%s" "ERROR: You need to pass a file"
+  exit 1
+fi
+
+# mimeo is much faster. Use it if you have it
+mime=$(mimeo --mimetype "$1" | tail -1 | sed 's/^ *//')
+#mime=$(xdg-mime query filetype "$1")
+if [ -z "$mime" ]; then
+  printf "%s" "ERROR: Cannot determine file type"
+  exit 1
+fi
+
+desktop=$(grep "$mime" --recursive --binary-file=without-match --null --files-with-matches ${HOME}/.local/share/applications/*.desktop /usr/share/applications/*.desktop | sort --zero-terminated --reverse | fzf --read0)
+if [ -z "$desktop" ]; then
+  printf "%s" "ERROR: Cannot determine desktop file"
+  exit 1
+fi
+
+# infile=$(realpath "$1")
+# replace "/" with "\/" to make sed happy
+# infile2=${infile//\//\\\/}
+bin=$(grep -m 1 --only-matching -P "(?<=Exec=).*" "$desktop" | sed "s/%u/"$1"/; s/%U/"$1"/; s/%f/"$1"/; s/%F/"$1"/;")
+
+echo "$bin"
+# run the program
+$bin
